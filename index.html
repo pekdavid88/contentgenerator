@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Affiliate Tartalom Generátor - SEO Expert</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+        }
+        body {
+            background-color: var(--bg-dark);
+            color: #f1f5f9;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        .glass-card {
+            background: var(--card-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .input-field {
+            background: #334155;
+            border: 1px solid #475569;
+            color: #f8fafc;
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: var(--accent);
+            outline: none;
+            ring: 2px var(--accent);
+        }
+        .btn-primary {
+            background-color: var(--accent);
+            color: #0f172a;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+        .keyword-stat-badge {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            font-size: 0.75rem;
+        }
+        .live-badge {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white tracking-tight">Affiliate <span class="text-sky-400">Content AI</span></h1>
+                <p class="text-slate-400 mt-1 text-sm">Profi SEO tartalomgenerátor intelligens kulcsszó-súlyozással</p>
+            </div>
+            <div class="flex gap-2">
+                <input type="password" id="apiKey" placeholder="Gemini API Key..." class="input-field rounded-lg px-4 py-2 text-sm w-64">
+                <select id="modelSelect" class="input-field rounded-lg px-3 py-2 text-sm cursor-pointer">
+                    <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash</option>
+                    <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Pro</option>
+                    <option value="gemini-3.0-preview-09-2025">Gemini 3.0 Pro Preview</option>
+                </select>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Side: Configuration -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-sky-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Projekt Beállítások
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Cikk témája</label>
+                            <input type="text" id="topic" placeholder="Pl: Kárpittisztító gépek tesztje" class="input-field w-full rounded-lg p-3">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Termékek (max 5 db)</label>
+                            <div id="productContainer" class="space-y-2">
+                                <input type="text" class="product-input input-field w-full rounded-lg p-2 text-sm" placeholder="1. termék neve">
+                            </div>
+                            <button onclick="addProductField()" class="mt-1 text-xs text-sky-400 hover:text-sky-300 font-semibold">+ Termék hozzáadása</button>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Tömeges Kulcsszó Beillesztés</label>
+                                <span id="kwCountLabel" class="text-[10px] bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full font-bold">0 kulcsszó</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 mb-2 italic">Formátum: "kulcsszó szám" soronként (pl. kárpittisztító 9900)</p>
+                            <textarea id="kwMassInput" rows="6" 
+                                oninput="handleKeywordLiveUpdate()"
+                                placeholder="kárpittisztító gép 9900&#10;kárpittisztító 8100&#10;szőnyegtisztító 2400" 
+                                class="input-field w-full rounded-lg p-3 text-sm font-mono"></textarea>
+                            
+                            <!-- Élő visszajelzés a felismert kulcsszavakról -->
+                            <div id="liveKeywordPreview" class="mt-2 flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-slate-900/30 rounded-lg border border-slate-700/30 hidden">
+                                <!-- Ide kerülnek a felismert kulcsszavak -->
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Extra utasítások</label>
+                            <textarea id="extraInstructions" rows="2" placeholder="Opcionális megjegyzések..." class="input-field w-full rounded-lg p-3 text-sm"></textarea>
+                        </div>
+
+                        <button id="generateBtn" onclick="generateContent()" class="btn-primary w-full py-4 rounded-xl text-lg flex justify-center items-center gap-2 shadow-lg shadow-sky-500/20">
+                            <span>🚀 Tartalom Generálása</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Output -->
+            <div class="lg:col-span-7 flex flex-col">
+                <div class="glass-card rounded-2xl p-6 flex-1 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            HTML Eredmény
+                        </h2>
+                        <button onclick="copyToClipboard()" class="text-xs bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg transition-colors font-semibold">
+                            Vágólapra másolás
+                        </button>
+                    </div>
+
+                    <div id="loading" class="hidden flex flex-col items-center justify-center flex-1 space-y-4 py-20">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-400"></div>
+                        <p class="text-slate-400 animate-pulse font-medium">SEO optimalizált tartalom generálása...</p>
+                    </div>
+
+                    <div id="resultContainer" class="flex-1 overflow-y-auto bg-slate-900/50 rounded-xl p-6 border border-slate-700/50 min-h-[500px]">
+                        <div id="output" class="prose prose-invert max-w-none text-slate-300 text-sm leading-relaxed">
+                            <p class="text-slate-500 italic">Töltsd ki az adatokat és nyomj a generálásra...</p>
+                        </div>
+                    </div>
+
+                    <div id="keywordStats" class="mt-4 flex flex-wrap gap-2 py-2">
+                        <!-- Statisztika a generálás után -->
+                    </div>
+
+                    <div class="mt-2 pt-4 border-t border-slate-700 flex justify-between text-[11px] text-slate-500 font-bold uppercase tracking-widest">
+                        <span id="wordCount">Szavak: 0</span>
+                        <span id="charCount">Karakterek: 0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function addProductField() {
+            const container = document.getElementById('productContainer');
+            const inputs = container.getElementsByClassName('product-input');
+            if (inputs.length < 5) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'product-input input-field w-full rounded-lg p-2 text-sm mt-2';
+                input.placeholder = `${inputs.length + 1}. termék neve`;
+                container.appendChild(input);
+            }
+        }
+
+        function parseKeywords(text) {
+            const lines = text.split('\n');
+            const keywords = [];
+            lines.forEach(line => {
+                // Reguláris kifejezés: bármi a sor elején, amit egy szóköz és egy szám követ a végén
+                const match = line.trim().match(/(.+)\s+(\d+)$/);
+                if (match) {
+                    keywords.push({
+                        word: match[1].trim(),
+                        volume: parseInt(match[2])
+                    });
+                }
+            });
+            return keywords;
+        }
+
+        // ÉLŐ VISSZAJELZÉS FUNKCIÓ
+        function handleKeywordLiveUpdate() {
+            const text = document.getElementById('kwMassInput').value;
+            const parsed = parseKeywords(text);
+            const previewContainer = document.getElementById('liveKeywordPreview');
+            const countLabel = document.getElementById('kwCountLabel');
+
+            countLabel.innerText = `${parsed.length} kulcsszó`;
+
+            if (parsed.length > 0) {
+                previewContainer.classList.remove('hidden');
+                previewContainer.innerHTML = parsed.map(k => `
+                    <span class="live-badge text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                        ${k.word} <span class="opacity-50 text-[9px]">${k.volume.toLocaleString()}</span>
+                    </span>
+                `).join('');
+            } else {
+                previewContainer.classList.add('hidden');
+                previewContainer.innerHTML = '';
+            }
+        }
+
+        function calculateWeights(keywords) {
+            if (keywords.length === 0) return [];
+            const maxVolume = Math.max(...keywords.map(k => k.volume));
+            return keywords.map(k => ({
+                word: k.word,
+                weight: Math.max(1, Math.round((k.volume / maxVolume) * 10))
+            })).sort((a, b) => b.weight - a.weight);
+        }
+
+        function updateStats() {
+            const outputEl = document.getElementById('output');
+            const text = outputEl.innerText || outputEl.textContent;
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            const chars = text.length;
+            document.getElementById('wordCount').innerText = `Szavak: ${words}`;
+            document.getElementById('charCount').innerText = `Karakterek: ${chars}`;
+        }
+
+        async function generateContent() {
+            const apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) {
+                alert("Kérlek, add meg a Gemini API kulcsodat!");
+                return;
+            }
+
+            const topic = document.getElementById('topic').value;
+            const kwRaw = document.getElementById('kwMassInput').value;
+            const parsedKeywords = parseKeywords(kwRaw);
+            const weightedKeywords = calculateWeights(parsedKeywords);
+            const products = Array.from(document.querySelectorAll('.product-input'))
+                .map(i => i.value.trim())
+                .filter(v => v !== "");
+            const instructions = document.getElementById('extraInstructions').value;
+            const model = document.getElementById('modelSelect').value;
+
+            if (!topic) {
+                alert("Kérlek, adj meg egy témát!");
+                return;
+            }
+
+            const statBox = document.getElementById('keywordStats');
+            statBox.innerHTML = '<span class="text-[10px] text-slate-500 w-full mb-1 uppercase tracking-widest font-bold">Végleges SEO súlyozás:</span>';
+            weightedKeywords.forEach(k => {
+                statBox.innerHTML += `<span class="keyword-stat-badge px-2 py-0.5 rounded text-sky-300 font-mono">${k.word} (${k.weight})</span>`;
+            });
+
+            const btn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const resultBox = document.getElementById('output');
+
+            btn.disabled = true;
+            loading.classList.remove('hidden');
+            resultBox.classList.add('hidden');
+
+            const systemPrompt = `Te egy profi affiliate blogger és SEO szakértő vagy. 
+            A feladatod egy legalább 500 szavas, tegező stílusú, meggyőző cikk írása.
+            
+            SZIGORÚ SZABÁLY:
+            - A szövegben szereplő kulcsszavakat NE EMELD KI (ne legyen strong, b, i, u tag vagy egyéb stílus rajtuk).
+            - A kulcsszavak simuljanak bele természetesen a mondatokba.
+            
+            ELVÁRÁSOK:
+            - Használj tiszta HTML formátumot (p, h2, h3, ul, li, table). 
+            - A stílus legyen barátságos, tegező, profi SEO és webshop barát megfogalmazásban.
+            - A címek legyenek kreatívak és modernek.
+            - A legmagasabb súlyú kulcsszavak szerepeljenek a H2 vagy H3 címekben is.
+            - Legyen benne 'Fun Fact' érdekesség szakasz és Előnyök/Hátrányok rész.
+            - A kimenet KIZÁRÓLAG a cikk HTML kódja legyen, bevezető szöveg nélkül.`;
+
+            const userPrompt = `Írj egy SEO-optimalizált cikket.
+            TÉMA: ${topic}
+            TERMÉKEK: ${products.join(", ")}
+            KULCSSZAVAK ÉS SÚLYUK (NE emeld ki őket a szövegben!): ${weightedKeywords.map(k => `${k.word} (Súly: ${k.weight})`).join(", ")}
+            EXTRA UTASÍTÁSOK: ${instructions}
+            A cikk legyen minimum 500 szó.`;
+
+            try {
+                let retryCount = 0;
+                const maxRetries = 5;
+                let success = false;
+                let data;
+
+                while (retryCount < maxRetries && !success) {
+                    try {
+                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: userPrompt }] }],
+                                systemInstruction: { parts: [{ text: systemPrompt }] }
+                            })
+                        });
+
+                        if (!response.ok) throw new Error('API Error');
+                        data = await response.json();
+                        success = true;
+                    } catch (e) {
+                        retryCount++;
+                        await new Promise(r => setTimeout(r, Math.pow(2, retryCount) * 1000));
+                    }
+                }
+
+                if (success) {
+                    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Hiba történt.";
+                    const cleanHtml = generatedText.replace(/```html|```/g, "").trim();
+                    resultBox.innerHTML = cleanHtml;
+                } else {
+                    resultBox.innerHTML = "<p class='text-red-400 font-medium'>Nem sikerült generálni a tartalmat. Ellenőrizd a kulcsot!</p>";
+                }
+
+            } catch (error) {
+                resultBox.innerHTML = "<p class='text-red-400 font-medium'>Váratlan hiba történt a generálás során.</p>";
+            } finally {
+                btn.disabled = false;
+                loading.classList.add('hidden');
+                resultBox.classList.remove('hidden');
+                updateStats();
+            }
+        }
+
+        function copyToClipboard() {
+            const content = document.getElementById('output').innerHTML;
+            const el = document.createElement('textarea');
+            el.value = content;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            
+            const copyBtn = event.target;
+            const originalText = copyBtn.innerText;
+            copyBtn.innerText = "✓ Másolva!";
+            setTimeout(() => copyBtn.innerText = originalText, 2000);
+        }
+    </script>
+</body>
+</html>
